@@ -34,7 +34,9 @@ class MainActivity : AppCompatActivity() {
     var authStateListener: FirebaseAuth.AuthStateListener? = null
     var childEventListener: ChildEventListener? = null
 
+
     val RC_SIGN_IN = 1
+    val RC_PHOTO_PICKER = 2
 
     //recyclerView list
     var list = ArrayList<FriendlyMessage>()
@@ -52,6 +54,16 @@ class MainActivity : AppCompatActivity() {
         //rec view adapter attach
         recView.layoutManager = LinearLayoutManager(this)
         recView.adapter = RecViewAdapter(list)
+
+        imageSendBtn.setOnClickListener {
+            val i = Intent().apply {
+                action = Intent.ACTION_GET_CONTENT
+                setType("image/jpeg")
+                putExtra(Intent.EXTRA_LOCAL_ONLY,true)
+            }.also { startActivityForResult(Intent.createChooser(it,"COMPLETE ACTION USING"),RC_PHOTO_PICKER) }
+        }
+
+
 
         //send btn
         sendBtn.setOnClickListener {
@@ -108,16 +120,20 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        attachDatabaseReadListener()
-        firebaseAuth.removeAuthStateListener(authStateListener!!)
+        if(authStateListener != null){
+            firebaseAuth.removeAuthStateListener(authStateListener!!)
+
+        }
+        list.clear()
+        recView.adapter?.notifyDataSetChanged()
+        detachDatabaseReadListener()
     }
 
     override fun onResume() {
         super.onResume()
-        if (authStateListener != null) {
-            firebaseAuth.addAuthStateListener(authStateListener!!)
-        }
-        detachDatabaseReadListener()
+        attachDatabaseReadListener()
+        firebaseAuth.addAuthStateListener(authStateListener!!)
+
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
