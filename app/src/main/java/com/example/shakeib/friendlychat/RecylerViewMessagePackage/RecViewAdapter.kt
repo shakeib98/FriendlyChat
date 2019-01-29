@@ -16,8 +16,13 @@ class RecViewAdapter(var data:ArrayList<FriendlyMessage>) : RecyclerView.Adapter
 
     override fun onBindViewHolder(p0: RevViewHolder, p1: Int) {
         p0.authorText.text = data[p1].name
-        p0.messageText.text = data[p1].text
+        if(data[p1].text !=null){
+            p0.messageText.text = data[p1].text
+        }else{
+            p0.messageText.visibility = View.GONE
+        }
         if(p0.photoImageView !=null){
+            p0.photoImageView.visibility = View.VISIBLE
             Glide.with(p0.photoImageView.context).load(data[p1].photoUrl).into(p0.photoImageView)
         }else{
             p0.photoImageView.visibility = View.GONE

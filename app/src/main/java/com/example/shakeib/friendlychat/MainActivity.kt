@@ -20,8 +20,14 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.ChildEventListener
 import android.text.method.TextKeyListener.clear
 import android.content.Intent
-
-
+import android.net.Uri
+import com.google.android.gms.tasks.Continuation
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.android.gms.tasks.OnSuccessListener
+import com.google.android.gms.tasks.Task
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
+import com.google.firebase.storage.UploadTask
 
 
 class MainActivity : AppCompatActivity() {
@@ -33,6 +39,8 @@ class MainActivity : AppCompatActivity() {
     lateinit var firebaseAuth: FirebaseAuth
     var authStateListener: FirebaseAuth.AuthStateListener? = null
     var childEventListener: ChildEventListener? = null
+    lateinit var fbStorage:FirebaseStorage
+    lateinit var storageReference: StorageReference
 
 
     val RC_SIGN_IN = 1
@@ -49,12 +57,16 @@ class MainActivity : AppCompatActivity() {
         firebaseDb = FirebaseDatabase.getInstance()
         dbReference = firebaseDb.reference.child("messages")
         firebaseAuth = FirebaseAuth.getInstance()
+        fbStorage = FirebaseStorage.getInstance()
+        storageReference = fbStorage.reference.child("chat_photos")
 
 
         //rec view adapter attach
         recView.layoutManager = LinearLayoutManager(this)
         recView.adapter = RecViewAdapter(list)
 
+
+        //image button send code
         imageSendBtn.setOnClickListener {
             val i = Intent().apply {
                 action = Intent.ACTION_GET_CONTENT
@@ -74,8 +86,6 @@ class MainActivity : AppCompatActivity() {
             })
             editText.setText("")
         }
-
-        //referencing db
 
 
         //initializing authstatelistener
@@ -115,6 +125,25 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Sign in canceled", Toast.LENGTH_SHORT).show()
                 finish()
             }
+
+        }else if(resultCode == Activity.RESULT_OK && requestCode == RC_PHOTO_PICKER){
+            val uri = data!!.data as Uri
+            val photo = storageReference.child(uri.lastPathSegment!!)
+            photo.putFile(uri).continueWithTask(object: Continuation<UploadTask.TaskSnapshot, Task<Uri>>{
+                override fun then(p0: Task<UploadTask.TaskSnapshot>): Task<Uri> = photo.downloadUrl
+
+            }).addOnSuccessListener {
+                val uri = it.toString()
+                Toast.makeText(this,uri,Toast.LENGTH_SHORT).show()
+                dbReference.push().setValue(FriendlyMessage().apply {
+                    name = username
+                    text = null
+                    photoUrl = uri
+                })
+            }.addOnFailureListener {
+                Toast.makeText(this,"Failed to upload image",Toast.LENGTH_SHORT).show()
+            }
+
         }
     }
 
@@ -175,7 +204,7 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onChildAdded(p0: DataSnapshot, p1: String?) {
                     list.add(p0.getValue(FriendlyMessage::class.java)!!)
-                    recView.adapter?.notifyDataSetChanged()
+                    recView.adapter?.notifyItemInserted(list.size-1)
                 }
 
                 override fun onChildRemoved(p0: DataSnapshot) {}
